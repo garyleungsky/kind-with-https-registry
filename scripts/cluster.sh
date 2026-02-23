@@ -68,7 +68,7 @@ case "$1" in
     echo "4. Connecting Registry to Kind Network..."
     # Check if registry is already connected to the kind network
     REG_IP=$(docker inspect -f '{{.NetworkSettings.Networks.kind.IPAddress}}' "$REGISTRY_NAME" 2>/dev/null)
-    if [ -n "$REG_IP" ]; then
+    if [ -n "$REG_IP" ] && [ "$REG_IP" != "<no value>" ]; then
         echo "   ℹ️  Registry already connected to kind network, skipping..."
     else
         # Connect the registry to the kind network so pods can access it
