@@ -53,10 +53,14 @@ case "$1" in
         echo "   ✅ Registry started"
     else
         docker run -d --name $REGISTRY_NAME --restart=always \
-          -p $REGISTRY_PORT:$REGISTRY_PORT -v "$(pwd):/certs" \
+          -p $REGISTRY_PORT:$REGISTRY_PORT \
+          -v "$(pwd):/certs" \
+          --tmpfs /var/lib/registry:rw,size=2g \
           -e REGISTRY_HTTP_ADDR=0.0.0.0:$REGISTRY_PORT \
           -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/$REGISTRY_NAME.pem \
           -e REGISTRY_HTTP_TLS_KEY=/certs/$REGISTRY_NAME-key.pem \
+          -e REGISTRY_STORAGE_CACHE_BLOBDESCRIPTOR=inmemory \
+          -e REGISTRY_STORAGE_DELETE_ENABLED=true \
           registry:2 > /dev/null
         echo "   ✅ Registry started"
     fi
