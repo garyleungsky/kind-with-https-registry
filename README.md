@@ -33,8 +33,8 @@
     ```
 
 ## Part 3: Cluster Spin-up
- 
- Once the prerequisites are installing and certificates are generated, you can use `make` or the script directly to manage the cluster.
+
+ Once the prerequisites are installed and certificates are generated, you can use `make` or the script directly to manage the cluster.
  
  ### Using Makefile (Recommended)
  
@@ -50,22 +50,28 @@
  
  # Tear down
  make down
+
+ # Clean certificates (optional)
+ make clean
  ```
- 
+
  ### Using Script Directly
- 
+
  ```bash
  # Start the cluster and registry
  ./scripts/cluster.sh up
- 
+
  # Check status
  ./scripts/cluster.sh status
- 
+
  # Verify connectivity
  ./scripts/cluster.sh verify
- 
+
  # Tear down
  ./scripts/cluster.sh down
+
+ # Clean certificates (optional)
+ ./scripts/cluster.sh clean
  ```
 
 ### Script Usage
@@ -108,16 +114,16 @@
      You can verify that the image is in the local registry using `curl` and `jq`.
      ```bash
      # List repositories
-     curl -s https://kind-registry.local:5005/v2/_catalog | jq
+     curl -s --cacert ca.pem https://kind-registry.local:5005/v2/_catalog | jq
      # Output:
      # {
      #   "repositories": [
      #     "hello-app"
      #   ]
      # }
- 
+
      # List tags for hello-app
-     curl -s https://kind-registry.local:5005/v2/hello-app/tags/list | jq
+     curl -s --cacert ca.pem https://kind-registry.local:5005/v2/hello-app/tags/list | jq
      # Output:
      # {
      #   "name": "hello-app",
