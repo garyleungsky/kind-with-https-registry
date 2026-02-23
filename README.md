@@ -5,7 +5,7 @@
 1.  **Install Tools**:
     ```bash
     brew install kind mkcert docker kubectl make jq curl
-    
+
     # For Firefox support (optional)
     brew install nss
     ```
@@ -35,19 +35,19 @@
 ## Part 3: Cluster Spin-up
 
  Once the prerequisites are installed and certificates are generated, you can use `make` or the script directly to manage the cluster.
- 
+
  ### Using Makefile (Recommended)
- 
+
  ```bash
  # Start the cluster and registry
  make up
- 
+
  # Check status
  make status
- 
+
  # Verify connectivity
  make verify
- 
+
  # Tear down
  make down
 
@@ -76,40 +76,45 @@
 
 ### Script Usage
  The script automatically generates the necessary certificates if they are missing.
- 
+
  ## Part 4: Usage Example
- 
+
+ ### Option A: Using HTTPS Registry (Tests Full TLS Stack)
+
  Here is how to pull a public image, push it to your local registry, and deploy it to the cluster.
- 
+
  1.  **Pull an image**:
      ```bash
      docker pull gcr.io/google-samples/hello-app:1.0
      ```
- 
+
  2.  **Tag the image**:
      Tag it with your local registry address.
      ```bash
      docker tag gcr.io/google-samples/hello-app:1.0 kind-registry.local:5005/hello-app:1.0
      ```
- 
+
  3.  **Push to local registry**:
      ```bash
      docker push kind-registry.local:5005/hello-app:1.0
      ```
- 
+     > [!NOTE]
+     > Push operations may take 1-2 minutes due to Docker client rate limiting with HTTPS registries.
+     > This is a Docker Desktop limitation, not a registry performance issue. See [Performance Notes](#performance-notes) below.
+
  4.  **Deploy to cluster**:
      Apply the example manifest.
      ```bash
      kubectl apply -f k8s-manifests/example-pod.yaml
      ```
- 
+
  5.  **Verify**:
      Check if the pod is running.
      ```bash
      kubectl get pods
      # Should show 'hello-registry' as Running
      ```
- 
+
  6.  **Check Registry Catalog**:
      You can verify that the image is in the local registry using `curl` and `jq`.
      ```bash
@@ -132,3 +137,72 @@
      #   ]
      # }
      ```
+
+ ### Option B: Using `kind load` (Fast Development Workflow)
+
+ For faster development iteration, you can load images directly into kind nodes without using the registry:
+
+ ```bash
+ # Pull the image
+ docker pull gcr.io/google-samples/hello-app:1.0
+
+ # Load directly into kind (takes ~2 seconds)
+ kind load docker-image gcr.io/google-samples/hello-app:1.0 --name local-cluster
+
+ # Deploy using the original image name
+ kubectl run hello-app --image=gcr.io/google-samples/hello-app:1.0 --image-pull-policy=Never
+
+ # Verify
+ kubectl get pods
+ ```
+
+ **Pros:**
+ - ✅ Very fast (~2 seconds vs 1-2 minutes)
+ - ✅ No registry push needed
+ - ✅ Perfect for rapid development
+
+ **Cons:**
+ - ❌ Doesn't test registry functionality
+ - ❌ Doesn't validate TLS/HTTPS setup
+ - ❌ Images only available in this specific cluster
+
+ **When to use:**
+ - Use **Option A** when testing registry functionality or TLS setup
+ - Use **Option B** for fast development iteration
+
+
+ ## Performance Notes
+
+ ### Registry Push Performance
+
+ When pushing images to the HTTPS registry, you may notice it takes 1-2 minutes. This is **normal** and caused by Docker client behavior, not registry performance.
+
+ **What's happening:**
+ - Registry responses are very fast (1-5ms)
+ - Docker client adds ~5 second delays between layer operations
+ - For a 15-layer image: 15 layers × 5 seconds = ~75 seconds minimum
+ - This is Docker Desktop's rate limiting/retry logic for HTTPS registries
+
+ **Registry optimizations already applied:**
+ - ✅ tmpfs (RAM disk) for storage - eliminates disk I/O
+ - ✅ In-memory blob descriptor caching
+ - ✅ Optimized storage configuration
+
+ **Workarounds:**
+ 1. **Use `kind load`** for development (see Option B above) - ~2 seconds
+ 2. **Accept the delay** when testing HTTPS registry functionality
+ 3. **Push smaller images** with fewer layers
+ 4. **Subsequent pushes** of the same layers are faster (cached)
+
+ ### Cluster Startup Performance
+
+ - **First run:** 20-60 seconds (downloading node image)
+ - **Subsequent runs:** 10-15 seconds (image cached)
+ - This is normal for Kubernetes cluster creation
+
+ **Time breakdown:**
+ - Certificate generation: ~1-2 seconds
+ - Kind cluster creation: ~10-11 seconds (largest component)
+ - Registry startup: ~1 second
+ - Network configuration: <1 second
+ - Trust patching: ~1 second
