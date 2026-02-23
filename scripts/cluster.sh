@@ -24,8 +24,8 @@ case "$1" in
 
     if [ ! -f "$REGISTRY_NAME.pem" ] || [ ! -f "$REGISTRY_NAME-key.pem" ] || [ ! -f "ca.pem" ]; then
         echo "   ⚠️  Certificates missing. Generating them now..."
-        TRUST_STORES=system,nss mkcert -install > /dev/null 2>&1
-        mkcert $REGISTRY_NAME > /dev/null 2>&1
+        TRUST_STORES=system,nss mkcert -install > /dev/null
+        mkcert $REGISTRY_NAME > /dev/null
         cp "$(mkcert -CAROOT)/rootCA.pem" ./ca.pem
         echo "   ✅ Certificates generated."
     else
@@ -33,7 +33,7 @@ case "$1" in
     fi
 
     echo "2. Creating Cluster..."
-    kind create cluster --config k8s-manifests/kind-config.yaml --image kindest/node:$K8S_VERSION > /dev/null 2>&1
+    kind create cluster --config k8s-manifests/kind-config.yaml --image kindest/node:$K8S_VERSION > /dev/null
     echo "   ✅ Cluster created"
 
     echo "3. Starting HTTPS Registry..."
@@ -72,7 +72,7 @@ EOF
     echo "--- Tearing Down ---"
     echo "1. Deleting Cluster..."
     if kind get clusters 2>/dev/null | grep -q "^$CLUSTER_NAME$"; then
-        kind delete cluster --name $CLUSTER_NAME > /dev/null 2>&1
+        kind delete cluster --name $CLUSTER_NAME > /dev/null
         echo "   ✅ Cluster deleted"
     else
         echo "   ℹ️  Cluster does not exist"
@@ -80,7 +80,7 @@ EOF
 
     echo "2. Removing Registry..."
     if [ "$(docker ps -a -q -f name=$REGISTRY_NAME)" ]; then
-        docker stop $REGISTRY_NAME > /dev/null 2>&1 && docker rm $REGISTRY_NAME > /dev/null 2>&1
+        docker stop $REGISTRY_NAME > /dev/null && docker rm $REGISTRY_NAME > /dev/null
         echo "   ✅ Registry removed"
     else
         echo "   ℹ️  Registry does not exist"
