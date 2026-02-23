@@ -127,12 +127,39 @@ EOF
 
     # Test from pod (application level)
     echo "2. Testing from inside a pod..."
-    if kubectl run registry-test --image=curlimages/curl:latest --rm -i --restart=Never --command -- \
-      sh -c "curl -k https://kind-registry.local:5005/v2/ 2>&1" > /dev/null; then
-        echo "   ✅ Pods can access registry over HTTPS"
+
+    # Create a temporary configmap with the CA cert
+    kubectl create configmap registry-ca --from-file=ca.pem=./ca.pem 2>/dev/null || true
+
+    if kubectl run registry-test --image=curlimages/curl:latest --rm -i --restart=Never \
+      --overrides='
+{
+  "spec": {
+    "containers": [{
+      "name": "registry-test",
+      "image": "curlimages/curl:latest",
+      "command": ["curl", "--cacert", "/etc/ssl/certs/ca.pem", "https://kind-registry.local:5005/v2/"],
+      "volumeMounts": [{
+        "name": "ca-cert",
+        "mountPath": "/etc/ssl/certs",
+        "readOnly": true
+      }]
+    }],
+    "volumes": [{
+      "name": "ca-cert",
+      "configMap": {
+        "name": "registry-ca"
+      }
+    }]
+  }
+}' > /dev/null 2>&1; then
+        echo "   ✅ Pods can access registry over HTTPS with valid certificate"
     else
-        echo "   ⚠️  Pod test failed (this is expected if no pods can resolve the registry)"
+        echo "   ❌ Pod cannot verify registry certificate"
     fi
+
+    # Cleanup
+    kubectl delete configmap registry-ca 2>/dev/null || true
 
     ;;
 
