@@ -101,6 +101,21 @@ EOF
     else
         echo "   ℹ️  Registry does not exist"
     fi
+
+    echo ""
+    echo "ℹ️  Certificates preserved. Run '$0 clean' to remove them."
+    ;;
+
+  clean)
+    echo "--- Cleaning Certificates ---"
+    # Check if any certificate files exist
+    cert_files=(./*.pem ./*.key ./*.crt ./*.csr)
+    if [ -e "${cert_files[0]}" ] || [ -e "${cert_files[1]}" ] || [ -e "${cert_files[2]}" ] || [ -e "${cert_files[3]}" ]; then
+        rm -f ./*.pem ./*.key ./*.crt ./*.csr
+        echo "   ✅ Certificates removed"
+    else
+        echo "   ℹ️  No certificates found"
+    fi
     ;;
 
   status)
@@ -182,11 +197,12 @@ EOF
 
 
   *)
-    echo "Usage: $0 {up|down|status|verify}"
+    echo "Usage: $0 {up|down|clean|status|verify}"
     echo ""
     echo "Commands:"
     echo "  up      - Create cluster and registry"
-    echo "  down    - Destroy cluster and registry"
+    echo "  down    - Destroy cluster and registry (preserves certificates)"
+    echo "  clean   - Remove generated certificates"
     echo "  status  - Check status of cluster and registry"
     echo "  verify  - Test registry connectivity"
 
