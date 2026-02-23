@@ -1,4 +1,4 @@
-.PHONY: up down status verify help
+.PHONY: up down clean status verify help
 
 help: ## Show this help message
 	@echo "Usage: make [target]"
@@ -11,6 +11,9 @@ up: ## Create cluster and registry
 
 down: ## Destroy cluster and registry
 	@./scripts/cluster.sh down
+
+clean: ## Remove generated certificates
+	@./scripts/cluster.sh clean
 
 status: ## Check status of cluster and registry
 	@./scripts/cluster.sh status
