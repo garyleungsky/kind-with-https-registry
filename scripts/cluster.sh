@@ -33,17 +33,33 @@ case "$1" in
     fi
 
     echo "2. Creating Cluster..."
-    kind create cluster --config k8s-manifests/kind-config.yaml --image kindest/node:$K8S_VERSION > /dev/null
-    echo "   ✅ Cluster created"
+
+    # Check if cluster already exists
+    if kind get clusters 2>/dev/null | grep -q "^$CLUSTER_NAME$"; then
+        echo "   ℹ️  Cluster already exists, skipping..."
+    else
+        kind create cluster --config k8s-manifests/kind-config.yaml --image kindest/node:$K8S_VERSION > /dev/null
+        echo "   ✅ Cluster created"
+    fi
 
     echo "3. Starting HTTPS Registry..."
-    docker run -d --name $REGISTRY_NAME --restart=always \
-      -p $REGISTRY_PORT:$REGISTRY_PORT -v "$(pwd):/certs" \
-      -e REGISTRY_HTTP_ADDR=0.0.0.0:$REGISTRY_PORT \
-      -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/$REGISTRY_NAME.pem \
-      -e REGISTRY_HTTP_TLS_KEY=/certs/$REGISTRY_NAME-key.pem \
-      registry:2 > /dev/null
-    echo "   ✅ Registry started"
+
+    # Check if registry is already running
+    if [ "$(docker ps -q -f name=$REGISTRY_NAME)" ]; then
+        echo "   ℹ️  Registry already running, skipping..."
+    elif [ "$(docker ps -aq -f name=$REGISTRY_NAME)" ]; then
+        echo "   ⚠️  Registry exists but is stopped. Starting it..."
+        docker start $REGISTRY_NAME > /dev/null
+        echo "   ✅ Registry started"
+    else
+        docker run -d --name $REGISTRY_NAME --restart=always \
+          -p $REGISTRY_PORT:$REGISTRY_PORT -v "$(pwd):/certs" \
+          -e REGISTRY_HTTP_ADDR=0.0.0.0:$REGISTRY_PORT \
+          -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/$REGISTRY_NAME.pem \
+          -e REGISTRY_HTTP_TLS_KEY=/certs/$REGISTRY_NAME-key.pem \
+          registry:2 > /dev/null
+        echo "   ✅ Registry started"
+    fi
 
     echo "4. Connecting Registry to Kind Network..."
     # Connect the registry to the kind network so pods can access it
