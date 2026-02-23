@@ -56,13 +56,13 @@ case "$1" in
 
     echo "5. Patching Trust..."
     for node in $(kind get nodes --name $CLUSTER_NAME 2>/dev/null); do
-      docker exec $node mkdir -p /etc/containerd/certs.d/$REGISTRY_NAME:$REGISTRY_PORT
-      cat <<EOF | docker exec -i $node cp /dev/stdin /etc/containerd/certs.d/$REGISTRY_NAME:$REGISTRY_PORT/hosts.toml
+      docker exec "$node" mkdir -p /etc/containerd/certs.d/$REGISTRY_NAME:$REGISTRY_PORT
+      cat <<EOF | docker exec -i "$node" cp /dev/stdin /etc/containerd/certs.d/$REGISTRY_NAME:$REGISTRY_PORT/hosts.toml
 [host."https://$REGISTRY_NAME:$REGISTRY_PORT"]
   ca = "/etc/ssl/certs/ca.pem"
 EOF
 
-      docker exec $node sh -c "echo '$REG_IP $REGISTRY_NAME' >> /etc/hosts"
+      docker exec "$node" sh -c "echo '$REG_IP $REGISTRY_NAME' >> /etc/hosts"
 
     done
     echo "   ✅ Trust patched"
@@ -122,10 +122,8 @@ EOF
 
     # Test from pod (application level)
     echo "2. Testing from inside a pod..."
-    kubectl run registry-test --image=curlimages/curl:latest --rm -i --restart=Never --command -- \
-      sh -c "curl -k https://kind-registry.local:5005/v2/ 2>&1" > /dev/null
-
-    if [ $? -eq 0 ]; then
+    if kubectl run registry-test --image=curlimages/curl:latest --rm -i --restart=Never --command -- \
+      sh -c "curl -k https://kind-registry.local:5005/v2/ 2>&1" > /dev/null; then
         echo "   ✅ Pods can access registry over HTTPS"
     else
         echo "   ⚠️  Pod test failed (this is expected if no pods can resolve the registry)"
