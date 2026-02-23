@@ -62,13 +62,17 @@ case "$1" in
     fi
 
     echo "4. Connecting Registry to Kind Network..."
-    # Connect the registry to the kind network so pods can access it
-    docker network connect kind $REGISTRY_NAME > /dev/null
-
-    # Get the registry IP on the kind network
-    REG_IP=$(docker inspect -f '{{.NetworkSettings.Networks.kind.IPAddress}}' $REGISTRY_NAME)
+    # Check if registry is already connected to the kind network
+    REG_IP=$(docker inspect -f '{{.NetworkSettings.Networks.kind.IPAddress}}' "$REGISTRY_NAME" 2>/dev/null)
+    if [ -n "$REG_IP" ]; then
+        echo "   ℹ️  Registry already connected to kind network, skipping..."
+    else
+        # Connect the registry to the kind network so pods can access it
+        docker network connect kind "$REGISTRY_NAME" > /dev/null
+        REG_IP=$(docker inspect -f '{{.NetworkSettings.Networks.kind.IPAddress}}' "$REGISTRY_NAME")
+        echo "   ✅ Registry connected"
+    fi
     echo "   Registry IP on kind network: $REG_IP"
-    echo "   ✅ Registry connected"
 
     echo "5. Patching Trust..."
     for node in $(kind get nodes --name $CLUSTER_NAME 2>/dev/null); do
